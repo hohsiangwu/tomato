@@ -8,10 +8,12 @@
 
 import UIKit
 
-class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UICollectionViewDataSource, UICollectionViewDelegate {
 
     @IBOutlet weak var errorLabel: UILabel!
     @IBOutlet weak var moviesTableView: UITableView!
+    @IBOutlet weak var moviesCollectionView: UICollectionView!
+    @IBOutlet weak var toggleButton: UIBarButtonItem!
 
     var refreshControl: UIRefreshControl!
     var movies: [NSDictionary]?
@@ -34,6 +36,7 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
                 if let json = json {
                     self.movies = json["movies"] as? [NSDictionary]
                     self.moviesTableView.reloadData()
+                    self.moviesCollectionView.reloadData()
                     SVProgressHUD.dismiss()
                 }
             }
@@ -44,6 +47,8 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
 
         moviesTableView.dataSource = self
         moviesTableView.delegate = self
+        moviesCollectionView.dataSource = self
+        moviesCollectionView.delegate = self
     }
 
     override func didReceiveMemoryWarning() {
@@ -90,14 +95,53 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         tableView.deselectRowAtIndexPath(indexPath, animated: true)
     }
 
+    func collectionView(collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        if let movies = movies {
+            return movies.count
+        } else {
+            return 0
+        }
+    }
+
+    func collectionView(collectionView: UICollectionView, cellForItemAtIndexPath indexPath: NSIndexPath) -> UICollectionViewCell {
+        var cell = collectionView.dequeueReusableCellWithReuseIdentifier("MovieCollectionCell", forIndexPath: indexPath) as! MovieCollectionViewCell
+        let movie = movies![indexPath.item]
+        let url = NSURL(string: movie.valueForKeyPath("posters.thumbnail") as! String)!
+        cell.posterImageView.setImageWithURL(url)
+
+        return cell
+    }
+
+    @IBAction func toggleButtonClicked(sender: AnyObject) {
+        if moviesTableView.hidden {
+            moviesCollectionView.hidden = true
+            moviesTableView.reloadData()
+            let toggleImage = UIImage(named: "iconmonstr-archive-3-icon-24.png")
+            toggleButton.image = toggleImage
+            moviesTableView.hidden = false
+        } else {
+            moviesTableView.hidden = true
+            moviesCollectionView.reloadData()
+            let toggleImage = UIImage(named: "iconmonstr-menu-icon-24.png")
+            toggleButton.image = toggleImage
+            moviesCollectionView.hidden = false
+        }
+    }
     // MARK: - Navigation
 
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        let cell = sender as! UITableViewCell
-        let indexPath = moviesTableView.indexPathForCell(cell)!
+        var movie: NSDictionary
+        if moviesTableView.hidden {
+            let cell = sender as! UICollectionViewCell
+            let indexPath = moviesCollectionView.indexPathForCell(cell)!
+            movie = movies![indexPath.item]
 
-        let movie = movies![indexPath.row]
+        } else {
+            let cell = sender as! UITableViewCell
+            let indexPath = moviesTableView.indexPathForCell(cell)!
+            movie = movies![indexPath.row]
+        }
         let movieDetailsViewController = segue.destinationViewController as! MovieDetailsViewController
         movieDetailsViewController.movie = movie
     }

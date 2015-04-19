@@ -13,6 +13,7 @@ class MovieDetailsViewController: UIViewController {
     @IBOutlet weak var backgroundImageView: UIImageView!
     @IBOutlet weak var titleLabel: UILabel!
     @IBOutlet weak var synopsisLabel: UILabel!
+    @IBOutlet weak var titleNavigationItem: UINavigationItem!
 
     var movie: NSDictionary!
 
@@ -20,6 +21,7 @@ class MovieDetailsViewController: UIViewController {
         super.viewDidLoad()
 
         titleLabel.text = movie["title"] as? String
+        titleNavigationItem.title = movie["title"] as? String
         synopsisLabel.text = movie["synopsis"] as? String
         var urlString = movie.valueForKeyPath("posters.original") as! String
         var range = urlString.rangeOfString(".*cloudfront.net/", options: .RegularExpressionSearch)
