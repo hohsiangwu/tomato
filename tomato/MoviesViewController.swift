@@ -8,12 +8,13 @@
 
 import UIKit
 
-class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UICollectionViewDataSource, UICollectionViewDelegate {
+class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UICollectionViewDataSource, UICollectionViewDelegate, UISearchBarDelegate {
 
     @IBOutlet weak var errorLabel: UILabel!
     @IBOutlet weak var moviesTableView: UITableView!
     @IBOutlet weak var moviesCollectionView: UICollectionView!
     @IBOutlet weak var toggleButton: UIBarButtonItem!
+    @IBOutlet weak var movieSearchBar: UISearchBar!
 
     var refreshControl: UIRefreshControl!
     var movies: [NSDictionary]?
@@ -49,6 +50,7 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         moviesTableView.delegate = self
         moviesCollectionView.dataSource = self
         moviesCollectionView.delegate = self
+        movieSearchBar.delegate = self
     }
 
     override func didReceiveMemoryWarning() {
@@ -112,7 +114,40 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
         return cell
     }
 
+    func searchBar(searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchText.isEmpty {
+            let url = NSURL(string: "http://api.rottentomatoes.com/api/public/v1.0/lists/movies/box_office.json?apikey=dagqdghwaq3e3mxyrp7kmmj5&limit=20&country=us")!
+            let request = NSURLRequest(URL: url)
+
+            NSURLConnection.sendAsynchronousRequest(request, queue: NSOperationQueue.mainQueue()) { (response: NSURLResponse!, data: NSData!, error: NSError!) -> Void in
+                let json = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) as? NSDictionary
+                if let json = json {
+                    self.movies = json["movies"] as? [NSDictionary]
+                    self.moviesTableView.reloadData()
+                    self.moviesCollectionView.reloadData()
+                    SVProgressHUD.dismiss()
+                }
+            }
+        } else {
+            SVProgressHUD.show()
+            var urlEncodedString = searchText.stringByAddingPercentEncodingWithAllowedCharacters(.URLHostAllowedCharacterSet())!
+            let url = NSURL(string: "http://api.rottentomatoes.com/api/public/v1.0/movies.json?apikey=dagqdghwaq3e3mxyrp7kmmj5&q=\(urlEncodedString)")!
+            let request = NSURLRequest(URL: url)
+
+            NSURLConnection.sendAsynchronousRequest(request, queue: NSOperationQueue.mainQueue()) { (response: NSURLResponse!, data: NSData!, error: NSError!) -> Void in
+                let json = NSJSONSerialization.JSONObjectWithData(data, options: nil, error: nil) as? NSDictionary
+                if let json = json {
+                    self.movies = json["movies"] as? [NSDictionary]
+                    self.moviesTableView.reloadData()
+                    self.moviesCollectionView.reloadData()
+                    SVProgressHUD.dismiss()
+                }
+            }
+        }
+    }
+
     @IBAction func toggleButtonClicked(sender: AnyObject) {
+        view.endEditing(true)
         if moviesTableView.hidden {
             moviesCollectionView.hidden = true
             moviesTableView.reloadData()
@@ -125,18 +160,20 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
             let toggleImage = UIImage(named: "iconmonstr-menu-icon-24.png")
             toggleButton.image = toggleImage
             moviesCollectionView.hidden = false
+            view.endEditing(true)
         }
     }
+
     // MARK: - Navigation
 
     // In a storyboard-based application, you will often want to do a little preparation before navigation
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
+        view.endEditing(true)
         var movie: NSDictionary
         if moviesTableView.hidden {
             let cell = sender as! UICollectionViewCell
             let indexPath = moviesCollectionView.indexPathForCell(cell)!
             movie = movies![indexPath.item]
-
         } else {
             let cell = sender as! UITableViewCell
             let indexPath = moviesTableView.indexPathForCell(cell)!
